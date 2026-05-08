@@ -1,53 +1,64 @@
-const userModel = require("../models/userModel");
-const Joi = require("joi");
+let users = [];
+let id = 1;
 
-const schema = Joi.object({
-  name: Joi.string().min(3).required(),
-  email: Joi.string().email().required(),
-});
-
+// GET all users
 exports.getUsers = (req, res) => {
-  userModel.getAllUsers((err, users) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(users);
-  });
+  res.json(users);
 };
 
-exports.getUser = (req, res) => {
-  userModel.getUserById(req.params.id, (err, user) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (!user) return res.status(404).json({ message: "User not found" });
-    res.json(user);
-  });
+// GET user by ID
+exports.getUserById = (req, res) => {
+  const user = users.find(u => u.id === parseInt(req.params.id));
+
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  res.json(user);
 };
 
+// POST create user
 exports.createUser = (req, res) => {
-  const { error } = schema.validate(req.body);
-  if (error) return res.status(400).json({ error: error.details[0].message });
-
   const { name, email } = req.body;
 
-  userModel.createUser(name, email, (err, user) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.status(201).json(user);
-  });
+  if (!name || !email) {
+    return res.status(400).json({ message: "Name and email are required" });
+  }
+
+  const newUser = {
+    id: id++,
+    name,
+    email
+  };
+
+  users.push(newUser);
+  res.status(201).json(newUser);
 };
 
+// PUT update user
 exports.updateUser = (req, res) => {
-  const { error } = schema.validate(req.body);
-  if (error) return res.status(400).json({ error: error.details[0].message });
+  const user = users.find(u => u.id === parseInt(req.params.id));
+
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
 
   const { name, email } = req.body;
 
-  userModel.updateUser(req.params.id, name, email, (err) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ message: "User updated successfully" });
-  });
+  if (name) user.name = name;
+  if (email) user.email = email;
+
+  res.json(user);
 };
 
+// DELETE user
 exports.deleteUser = (req, res) => {
-  userModel.deleteUser(req.params.id, (err) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ message: "User deleted successfully" });
-  });
+  const index = users.findIndex(u => u.id === parseInt(req.params.id));
+
+  if (index === -1) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  users.splice(index, 1);
+  res.status(204).send();
 };
